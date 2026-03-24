@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 APP_NAME="OpenClaw"
-SCRIPT_VERSION="v0.3.0-modular"
+SCRIPT_VERSION="v0.3.1-modular"
 OPENCLAW_NPM_PACKAGE="openclaw@latest"
 OPENCLAW_HOME="${HOME}/.openclaw"
 OPENCLAW_CONFIG_FILE="${OPENCLAW_HOME}/openclaw.json"
@@ -10,6 +10,7 @@ WORKSPACE_DIR="${OPENCLAW_HOME}/workspace"
 BACKUP_DIR="${OPENCLAW_HOME}/backups"
 LAUNCH_AGENT_PLIST="${HOME}/Library/LaunchAgents/ai.openclaw.gateway.plist"
 LAST_ERROR_STEP="初始化"
+TEST_MODE="${OPENCLAW_TEST_MODE:-0}"
 
 cecho(){ printf '%s\n' "$*"; }
 warn(){ printf '⚠️ %s\n' "$*"; }
@@ -19,7 +20,7 @@ need_cmd(){ command -v "$1" >/dev/null 2>&1 || die "缺少命令: $1"; }
 step(){ LAST_ERROR_STEP="$1"; }
 trap 'rc=$?; if [ $rc -ne 0 ]; then printf "\n❌ 失败步骤：%s\n" "$LAST_ERROR_STEP" >&2; printf "💡 建议先看上方报错，再决定重试哪一步。\n" >&2; fi' ERR
 
-ensure_macos(){ step "检查系统"; [[ "$(uname -s)" == "Darwin" ]] || die "这个脚本只支持 macOS。"; }
+ensure_macos(){ step "检查系统"; if [[ "$TEST_MODE" == "1" ]]; then return 0; fi; [[ "$(uname -s)" == "Darwin" ]] || die "这个脚本只支持 macOS。"; }
 load_brew_env(){ [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)" || true; [[ -x /usr/local/bin/brew ]] && eval "$(/usr/local/bin/brew shellenv)" || true; }
 ensure_xcode_clt(){ step "检查 Xcode CLT"; xcode-select -p >/dev/null 2>&1 || { xcode-select --install || true; die "请先安装 Xcode Command Line Tools。"; }; }
 ensure_homebrew(){ step "检查 Homebrew"; command -v brew >/dev/null 2>&1 || /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; load_brew_env; need_cmd brew; }
@@ -35,7 +36,8 @@ self_check(){
   cecho "🔍 环境自检"
   cecho "======================================="
   cecho "脚本版本: $SCRIPT_VERSION"
-  cecho "系统: $(sw_vers -productName 2>/dev/null || echo macOS) $(sw_vers -productVersion 2>/dev/null || true)"
+  cecho "测试模式: $TEST_MODE"
+  cecho "系统: $(sw_vers -productName 2>/dev/null || uname -s) $(sw_vers -productVersion 2>/dev/null || true)"
   cecho "架构: $(uname -m)"
   echo
   for cmd in bash curl python3 git; do
