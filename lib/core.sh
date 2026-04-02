@@ -169,7 +169,7 @@ update_script(){
 
     # 下载 lib 文件
     mkdir -p "$tmp_dir/lib"
-    for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh; do
+    for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh logs.sh config.sh; do
       curl -fsSL --connect-timeout 10 --max-time 30 "$base_url/lib/$f" -o "$tmp_dir/lib/$f" 2>/dev/null || true
     done
 

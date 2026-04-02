@@ -95,7 +95,7 @@ first_run_setup(){
             }
           }
           mkdir -p "$perm_dir/lib"
-          for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh; do
+          for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh logs.sh config.sh; do
             curl -fsSL --connect-timeout 10 --max-time 60 "$base_url/lib/$f" -o "$perm_dir/lib/$f" 2>/dev/null || true
           done
           chmod +x "$perm_dir/openclaw-macos-kejilion-rebuild.sh"

@@ -17,7 +17,7 @@ curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/openclaw-macos-kejilion
 }
 
 echo "📦 下载 lib 模块..."
-for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh; do
+for f in common.sh core.sh api.sh memory.sh admin.sh backup.sh bot.sh plugin.sh skill.sh logs.sh config.sh; do
   echo "  - $f"
   curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/lib/$f" -o "$TMP_DIR/lib/$f" || {
     echo "❌ 下载 $f 失败"
