@@ -1,60 +1,59 @@
 #!/usr/bin/env bash
 
-install_openclaw(){ ensure_macos; ensure_xcode_clt; ensure_homebrew; install_dependencies; configure_npm_registry_if_needed; step "安装 OpenClaw"; npm install -g "$OPENCLAW_NPM_PACKAGE"; need_cmd openclaw; ensure_openclaw_config; openclaw onboard || true; json_update_base; cecho "✅ 安装完成"; }
+install_openclaw(){ ensure_macos; ensure_xcode_clt; ensure_homebrew; install_dependencies; configure_npm_registry_if_needed; step "安装 OpenClaw"; npm install -g "$OPENCLAW_NPM_PACKAGE"; detect_oc_cmd; need_cmd "$OC_CMD"; ensure_openclaw_config; $OC_CMD onboard || true; json_update_base; cecho "✅ 安装完成"; }
 start_gateway(){
   step "启动 Gateway"
-  need_cmd openclaw
-  # 先尝试 launchctl 加载
+  detect_oc_cmd
+  need_cmd "$OC_CMD"
   if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
     launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
     launchctl load "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
     cecho "✅ Gateway 已通过 launchctl 启动"
   else
-    # 没有 plist，直接前台启动
-    openclaw gateway start 2>&1 || {
+    $OC_CMD gateway start 2>&1 || {
       warn "gateway start 失败，尝试手动启动..."
-      openclaw gateway >/dev/null 2>&1 &
+      $OC_CMD gateway >/dev/null 2>&1 &
       cecho "✅ Gateway 已后台启动"
     }
   fi
 }
 stop_gateway(){
   step "停止 Gateway"
-  need_cmd openclaw
-  # 先尝试 launchctl 卸载
+  detect_oc_cmd
+  need_cmd "$OC_CMD"
   if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
     launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
     cecho "✅ Gateway 已通过 launchctl 停止"
   else
-    openclaw gateway stop 2>/dev/null || true
-    # 如果 launchctl 不行，尝试 kill 进程
-    pkill -f "openclaw.*gateway" 2>/dev/null || true
+    $OC_CMD gateway stop 2>/dev/null || true
+    pkill -f "$OC_CMD.*gateway" 2>/dev/null || true
     cecho "✅ Gateway 已停止"
   fi
 }
 restart_gateway(){
   step "重启 Gateway"
-  need_cmd openclaw
+  detect_oc_cmd
+  need_cmd "$OC_CMD"
   if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
     launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
     sleep 1
     launchctl load "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
   else
-    openclaw gateway stop >/dev/null 2>&1 || true
-    pkill -f "openclaw.*gateway" 2>/dev/null || true
+    $OC_CMD gateway stop >/dev/null 2>&1 || true
+    pkill -f "$OC_CMD.*gateway" 2>/dev/null || true
     sleep 1
-    openclaw gateway start >/dev/null 2>&1 || {
-      openclaw gateway >/dev/null 2>&1 &
+    $OC_CMD gateway start >/dev/null 2>&1 || {
+      $OC_CMD gateway >/dev/null 2>&1 &
     }
   fi
 }
-view_logs(){ step "查看日志"; need_cmd openclaw; openclaw status || true; echo; openclaw gateway status || true; echo; openclaw logs || true; }
-change_model(){ step "切换模型"; need_cmd openclaw; cecho "当前模型列表："; openclaw models list || true; read -r -p "输入要切换的模型 ID（0 返回）：" m; [[ -z "$m" || "$m" == "0" ]] && return 0; openclaw models set "$m"; cecho "✅ 已切换到：$m"; }
-run_onboard(){ step "运行配置向导"; need_cmd openclaw; openclaw onboard || true; }
-doctor_fix(){ step "健康检测"; need_cmd openclaw; openclaw doctor --fix || true; press_enter; }
+view_logs(){ step "查看日志"; detect_oc_cmd; need_cmd "$OC_CMD"; $OC_CMD status || true; echo; $OC_CMD gateway status || true; echo; $OC_CMD logs || true; }
+change_model(){ step "切换模型"; detect_oc_cmd; need_cmd "$OC_CMD"; cecho "当前模型列表："; $OC_CMD models list || true; read -r -p "输入要切换的模型 ID（0 返回）：" m; [[ -z "$m" || "$m" == "0" ]] && return 0; $OC_CMD models set "$m"; cecho "✅ 已切换到：$m"; }
+run_onboard(){ step "运行配置向导"; detect_oc_cmd; need_cmd "$OC_CMD"; $OC_CMD onboard || true; }
+doctor_fix(){ step "健康检测"; detect_oc_cmd; need_cmd "$OC_CMD"; $OC_CMD doctor --fix || true; press_enter; }
 update_openclaw(){ step "更新 OpenClaw"; ensure_homebrew; install_dependencies; npm install -g "$OPENCLAW_NPM_PACKAGE"; restart_gateway || true; cecho "✅ 已更新 OpenClaw"; press_enter; }
-uninstall_openclaw(){ step "卸载 OpenClaw"; read -r -p "确认卸载输入 yes：" y; [[ "$y" == "yes" ]] || return 0; remove_launch_agent || true; openclaw uninstall >/dev/null 2>&1 || true; npm uninstall -g openclaw || true; cecho "✅ 已卸载 npm 包，配置目录保留：$OPENCLAW_HOME"; press_enter; }
-extract_dashboard_url(){ openclaw dashboard 2>/dev/null | grep -Eo 'http://[^ ]+|https://[^ ]+' | head -n 1 || true; }
+uninstall_openclaw(){ step "卸载 OpenClaw"; detect_oc_cmd; read -r -p "确认卸载输入 yes：" y; [[ "$y" == "yes" ]] || return 0; remove_launch_agent || true; $OC_CMD uninstall >/dev/null 2>&1 || true; npm uninstall -g openclaw >/dev/null 2>&1 || true; cecho "✅ 已卸载 npm 包，配置目录保留：$OPENCLAW_HOME"; press_enter; }
+extract_dashboard_url(){ detect_oc_cmd; $OC_CMD dashboard 2>/dev/null | grep -Eo 'http://[^ ]+|https://[^ ]+' | head -n 1 || true; }
 extract_dashboard_token(){ extract_dashboard_url | sed -n 's/.*#token=//p' | head -n 1; }
 webui_add_origin(){ step "添加 WebUI origin"; read -r -p "输入 origin：" origin; [[ -n "$origin" ]] || return 0; python3 - "$OPENCLAW_CONFIG_FILE" "$origin" <<'PY'
 import json,sys
@@ -75,7 +74,7 @@ json.dump(d,open(p,'w',encoding='utf-8'),ensure_ascii=False,indent=2); open(p,'a
 PY
 restart_gateway || true; }
 webui_menu(){ step "WebUI 管理"; while true; do clear; cecho "OpenClaw WebUI"; local url token; url=$(extract_dashboard_url); token=$(extract_dashboard_token); cecho "本地地址：${url:-未获取到}"; [[ -n "$token" ]] && cecho "Token：$token"; jq '.gateway.controlUi.allowedOrigins // []' "$OPENCLAW_CONFIG_FILE" 2>/dev/null || true; echo; cecho "1. 打开本地 WebUI"; cecho "2. 添加 allowedOrigins"; cecho "3. 删除 allowedOrigins"; cecho "0. 返回"; read -r -p "请选择：" c; case "$c" in 1) [[ -n "$url" ]] && open "$url" || true; press_enter;; 2) webui_add_origin; press_enter;; 3) webui_remove_origin; press_enter;; 0) return 0;; *) warn "无效选项"; sleep 1;; esac; done; }
-tui_chat(){ step "TUI 对话"; need_cmd openclaw; openclaw tui; }
+tui_chat(){ step "TUI 对话"; detect_oc_cmd; need_cmd "$OC_CMD"; $OC_CMD tui; }
 install_launch_agent(){
   step "安装开机自启"
   local oc_bin

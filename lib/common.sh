@@ -13,6 +13,19 @@ LAST_ERROR_STEP="初始化"
 TEST_MODE="${OPENCLAW_TEST_MODE:-0}"
 SCRIPT_SETTINGS_FILE="${HOME}/.openclaw-macos-script-settings"
 
+# 自动检测 CLI 命令名（openclaw 或 clawd）
+OC_CMD=""
+detect_oc_cmd(){
+  if [[ -n "$OC_CMD" ]]; then return 0; fi
+  if command -v openclaw >/dev/null 2>&1; then
+    OC_CMD="openclaw"
+  elif command -v clawd >/dev/null 2>&1; then
+    OC_CMD="clawd"
+  else
+    OC_CMD="openclaw"
+  fi
+}
+
 cecho(){ printf '%s\n' "$*"; }
 warn(){ printf '⚠️ %s\n' "$*"; }
 die(){ printf '❌ %s\n' "$*" >&2; exit 1; }
