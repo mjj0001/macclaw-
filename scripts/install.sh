@@ -10,10 +10,17 @@ BASE_URL="${MIRROR}https://raw.githubusercontent.com/mjj0001/macosscript/main"
 mkdir -p "$TMP_DIR/lib" "$TMP_DIR/scripts" "$TMP_DIR/docs"
 
 echo "📦 下载主脚本..."
-curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/openclaw-macos-kejilion-rebuild.sh" -o "$TMP_DIR/openclaw-macos-kejilion-rebuild.sh" || {
+curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/openclaw-macos-kejilion-rebuild.sh" -o "$TMP_DIR/openclaw-macos-kejilion-rebuild.sh" 2>/dev/null || {
   echo "⚠️ 镜像下载失败，尝试直连..."
   BASE_URL="https://raw.githubusercontent.com/mjj0001/macosscript/main"
-  curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/openclaw-macos-kejilion-rebuild.sh" -o "$TMP_DIR/openclaw-macos-kejilion-rebuild.sh"
+  curl -fsSL --connect-timeout 10 --max-time 60 "$BASE_URL/openclaw-macos-kejilion-rebuild.sh" -o "$TMP_DIR/openclaw-macos-kejilion-rebuild.sh" || {
+    echo "❌ 下载失败，请检查网络"
+    echo "💡 备用方案："
+    echo "   git clone https://github.com/mjj0001/macosscript.git"
+    echo "   cd macosscript"
+    echo "   ./openclaw-macos-kejilion-rebuild.sh"
+    exit 1
+  }
 }
 
 echo "📦 下载 lib 模块..."
