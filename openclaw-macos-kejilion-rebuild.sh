@@ -21,8 +21,36 @@ source "$SCRIPT_DIR/lib/plugin.sh"
 # shellcheck source=lib/skill.sh
 source "$SCRIPT_DIR/lib/skill.sh"
 
-show_menu(){
+# --- 启动信息头 ---
+show_header(){
+  local install_status="❌ 未安装"
+  local run_status="❌ 未运行"
+  local openclaw_version="N/A"
+
+  if command -v openclaw >/dev/null 2>&1; then
+    install_status="✅ 已安装"
+    openclaw_version="$(openclaw --version 2>/dev/null || echo '未知')"
+  fi
+  if pgrep -f "openclaw.*gateway" >/dev/null 2>&1; then
+    run_status="✅ 运行中"
+  fi
+
   clear
+  cecho "╔═══════════════════════════════════════════════════════════╗"
+  cecho "║  🦞 OPENCLAW macOS 管理工具                              ║"
+  cecho "╠═══════════════════════════════════════════════════════════╣"
+  cecho "║  脚本版本: $SCRIPT_VERSION"
+  cecho "║  安装状态: $install_status"
+  cecho "║  运行状态: $run_status"
+  if [[ "$openclaw_version" != "N/A" ]]; then
+    cecho "║  程序版本: $openclaw_version"
+  fi
+  cecho "╚═══════════════════════════════════════════════════════════╝"
+  echo
+}
+
+show_menu(){
+  show_header
   cecho "======================================="
   cecho "🦞 OPENCLAW macOS 管理工具（模块拆分版）"
   cecho "版本: $SCRIPT_VERSION"
