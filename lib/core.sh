@@ -101,12 +101,14 @@ rollback_openclaw(){
     return 0
   fi
 
-  local history_count
+  local history_count=""
   history_count=$(python3 -c "
 import json,sys
-d=json.load(open(sys.argv[1],'r',encoding='utf-8'))
-print(len(d))
-" "$VERSION_HISTORY_FILE" 2>/dev/null || echo "0")
+try:
+    d=json.load(open(sys.argv[1],'r',encoding='utf-8'))
+    print(len(d))
+except: pass
+" "$VERSION_HISTORY_FILE" 2>/dev/null) || true
 
   if [[ "$history_count" == "0" ]]; then
     warn "暂无版本历史记录"
@@ -129,14 +131,16 @@ for i,v in enumerate(d[::-1]):
   read -r -p "选择要回滚到的版本（输入序号）：" idx
   [[ -z "$idx" || "$idx" == "0" ]] && return 0
 
-  local target_version
+  local target_version=""
   target_version=$(python3 -c "
 import json,sys
-d=json.load(open(sys.argv[1],'r',encoding='utf-8'))
-i=int(sys.argv[2])-1
-d=d[::-1]
-if 0<=i<len(d): print(d[i]['version'])
-" "$VERSION_HISTORY_FILE" "$idx" 2>/dev/null || echo "")
+try:
+    d=json.load(open(sys.argv[1],'r',encoding='utf-8'))
+    i=int(sys.argv[2])-1
+    d=d[::-1]
+    if 0<=i<len(d): print(d[i]['version'])
+except: pass
+" "$VERSION_HISTORY_FILE" "$idx" 2>/dev/null) || true
 
   if [[ -z "$target_version" ]]; then
     warn "无效选项"
