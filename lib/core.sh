@@ -1,9 +1,53 @@
 #!/usr/bin/env bash
 
 install_openclaw(){ ensure_macos; ensure_xcode_clt; ensure_homebrew; install_dependencies; configure_npm_registry_if_needed; step "安装 OpenClaw"; npm install -g "$OPENCLAW_NPM_PACKAGE"; need_cmd openclaw; ensure_openclaw_config; openclaw onboard || true; json_update_base; cecho "✅ 安装完成"; }
-start_gateway(){ step "启动 Gateway"; need_cmd openclaw; openclaw gateway stop >/dev/null 2>&1 || true; openclaw gateway start; cecho "✅ 已启动"; }
-stop_gateway(){ step "停止 Gateway"; need_cmd openclaw; openclaw gateway stop || true; cecho "✅ 已停止"; }
-restart_gateway(){ step "重启 Gateway"; need_cmd openclaw; openclaw gateway restart >/dev/null 2>&1 || { openclaw gateway stop >/dev/null 2>&1 || true; openclaw gateway start >/dev/null 2>&1; }; }
+start_gateway(){
+  step "启动 Gateway"
+  need_cmd openclaw
+  # 先尝试 launchctl 加载
+  if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
+    launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+    launchctl load "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+    cecho "✅ Gateway 已通过 launchctl 启动"
+  else
+    # 没有 plist，直接前台启动
+    openclaw gateway start 2>&1 || {
+      warn "gateway start 失败，尝试手动启动..."
+      openclaw gateway >/dev/null 2>&1 &
+      cecho "✅ Gateway 已后台启动"
+    }
+  fi
+}
+stop_gateway(){
+  step "停止 Gateway"
+  need_cmd openclaw
+  # 先尝试 launchctl 卸载
+  if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
+    launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+    cecho "✅ Gateway 已通过 launchctl 停止"
+  else
+    openclaw gateway stop 2>/dev/null || true
+    # 如果 launchctl 不行，尝试 kill 进程
+    pkill -f "openclaw.*gateway" 2>/dev/null || true
+    cecho "✅ Gateway 已停止"
+  fi
+}
+restart_gateway(){
+  step "重启 Gateway"
+  need_cmd openclaw
+  if [[ -f "$LAUNCH_AGENT_PLIST" ]]; then
+    launchctl unload "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+    sleep 1
+    launchctl load "$LAUNCH_AGENT_PLIST" >/dev/null 2>&1 || true
+  else
+    openclaw gateway stop >/dev/null 2>&1 || true
+    pkill -f "openclaw.*gateway" 2>/dev/null || true
+    sleep 1
+    openclaw gateway start >/dev/null 2>&1 || {
+      openclaw gateway >/dev/null 2>&1 &
+    }
+  fi
+}
 view_logs(){ step "查看日志"; need_cmd openclaw; openclaw status || true; echo; openclaw gateway status || true; echo; openclaw logs || true; }
 change_model(){ step "切换模型"; need_cmd openclaw; cecho "当前模型列表："; openclaw models list || true; read -r -p "输入要切换的模型 ID（0 返回）：" m; [[ -z "$m" || "$m" == "0" ]] && return 0; openclaw models set "$m"; cecho "✅ 已切换到：$m"; }
 run_onboard(){ step "运行配置向导"; need_cmd openclaw; openclaw onboard || true; }
