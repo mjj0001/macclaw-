@@ -8,7 +8,15 @@ if [[ -d "$SCRIPT_DIR/.git" ]]; then
   echo "📂 检测到本地脚本: $SCRIPT_DIR"
   cd "$SCRIPT_DIR"
   echo "🔄 正在检查更新..."
-  if git fetch origin main 2>/dev/null; then
+  # 带超时的 git fetch（macOS 无 timeout 命令，用后台进程实现）
+  GIT_UPDATED=0
+  (git fetch origin main 2>/dev/null && echo "OK") > /tmp/oc_git_fetch_$$ &
+  FETCH_PID=$!
+  (sleep 8; kill $FETCH_PID 2>/dev/null) &
+  TIMER_PID=$!
+  WAIT_RESULT=$(wait $FETCH_PID 2>/dev/null && echo "OK" || echo "FAIL")
+  kill $TIMER_PID 2>/dev/null; wait $TIMER_PID 2>/dev/null || true
+  if [[ "$WAIT_RESULT" == "OK" ]]; then
     LOCAL=$(git rev-parse HEAD 2>/dev/null || echo "")
     REMOTE=$(git rev-parse origin/main 2>/dev/null || echo "")
     if [[ "$LOCAL" != "$REMOTE" ]]; then
@@ -19,8 +27,9 @@ if [[ -d "$SCRIPT_DIR/.git" ]]; then
       echo "✅ 已是最新版本"
     fi
   else
-    echo "⚠️ 无法连接远程仓库，跳过更新"
+    echo "⚠️ 无法连接远程仓库（超时 8s），跳过更新"
   fi
+  rm -f /tmp/oc_git_fetch_$$
   chmod +x "$SCRIPT_DIR/openclaw-macos-kejilion-rebuild.sh"
   echo "🚀 启动..."
   exec "$SCRIPT_DIR/openclaw-macos-kejilion-rebuild.sh"
